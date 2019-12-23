@@ -14,6 +14,7 @@ import glob
 import cPickle
 #import base
 #import sigproc
+
 eps = 1e-5
 def wgn(x, snr):
     snr = 10**(snr/10.0)
@@ -102,7 +103,7 @@ def read_IEMOCAP():
     filter_num = 40
     pernums_test = np.arange(tnum)#remerber each utterance contain how many segments
     pernums_valid = np.arange(vnum)
-    rootdir = '/home/jamhan/hxj/datasets/IEMOCAP_full_release'
+    rootdir = '/home/mmnlab/PycharmProjects/speech-emotion-recognition-RNN-2/speech-emotion-recognition-1/IEMOCAP_full_release'
     
     mean1,std1,mean2,std2,mean3,std3 = load_data()
     
@@ -111,7 +112,8 @@ def read_IEMOCAP():
     angnum = 433#0
     neunum = 1262#3
     sadnum = 799#1
-    pernum = 300#np.min([hapnum,angnum,sadnum,neunum])
+    pernum = 300
+    #np.min([hapnum,angnum,sadnum,neunum])
     #valid_num = divmod((train_num),10)[0]
     train_label = np.empty((train_num,1), dtype = np.int8)
     test_label = np.empty((tnum,1), dtype = np.int8)
@@ -310,10 +312,12 @@ def read_IEMOCAP():
     neu_index = np.arange(neunum)
     sad_index = np.arange(sadnum)
     ang_index = np.arange(angnum)
-    h2 = 0
+
     a0 = 0
-    n3 = 0
     s1 = 0
+    h2 = 0
+    n3 = 0
+
     for l in range(train_num):
         if(train_label[l] == 0):
             ang_index[a0] = l
@@ -332,6 +336,7 @@ def read_IEMOCAP():
         np.random.shuffle(hap_index)
         np.random.shuffle(sad_index)
         np.random.shuffle(ang_index)
+
         #define emotional array
         hap_label = np.empty((pernum,1), dtype = np.int8)
         ang_label = np.empty((pernum,1), dtype = np.int8)

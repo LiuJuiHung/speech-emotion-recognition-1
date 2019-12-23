@@ -32,7 +32,7 @@ def Batch_Normalization(x, training, scope):
 def leaky_relu(x, leakiness=0.0):
     return tf.where(tf.less(x, 0.0), leakiness * x, x, name='leaky_relu')
 def load_data():
-    f = open('./CASIA_40_delta.pkl','rb')
+    f = open('./IEMOCAP.pkl','rb')
     train_data,train_label,test_data,test_label,valid_data,valid_label,Valid_label,Test_label,pernums_test,pernums_valid = cPickle.load(f)
     #train_data,train_label,test_data,test_label,valid_data,valid_label = cPickle.load(f)
     return train_data,train_label,test_data,test_label,valid_data,valid_label
@@ -117,7 +117,7 @@ def build_model(inputX, is_training,keep_prob):
     fully2_bias = tf.get_variable('fully2_bias', shape=[F2], dtype=tf.float32,
                                   initializer=tf.constant_initializer(0.1))
     layer1 = tf.nn.conv2d(inputX, layer1_filter, layer1_stride, padding='SAME')
-    layer1 = tf.nn.bias_add(layer1,layer1_bias)
+    layer1 = tf.nn.bias_add(layer1, layer1_bias)
     #layer1 = tf.layers.batch_normalization(layer1, training=is_training)
     #layer1 = Batch_Normalization(layer1, training=is_training, scope='layer1_batch')
     layer1 = leaky_relu(layer1, 0.01)

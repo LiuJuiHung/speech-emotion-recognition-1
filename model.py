@@ -18,9 +18,9 @@ from sklearn.metrics import recall_score as recall
 from sklearn.metrics import confusion_matrix as confusion
 import os
 
-tf.app.flags.DEFINE_integer('num_epoch', 5000, 'The number of epoches for training.')
+tf.app.flags.DEFINE_integer('num_epoch', 1, 'The number of epoches for training.')
 tf.app.flags.DEFINE_integer('num_classes', 4, 'The number of emotion classes.')
-tf.app.flags.DEFINE_integer('batch_size', 60, 'The number of samples in each batch.')
+tf.app.flags.DEFINE_integer('batch_size', 30, 'The number of samples in each batch.')
 tf.app.flags.DEFINE_boolean('is_adam', True,'whether to use adam optimizer.')
 tf.app.flags.DEFINE_float('learning_rate', 0.00001, 'learning rate of Adam optimizer')
 tf.app.flags.DEFINE_float   ('dropout_keep_prob',     1,        'the prob of every unit keep in dropout layer')
@@ -30,7 +30,7 @@ tf.app.flags.DEFINE_integer('image_channel', 3, 'image channels as input')
 
 tf.app.flags.DEFINE_string  ('traindata_path', './IEMOCAP.pkl', 'total dataset includes training set')
 tf.app.flags.DEFINE_string  ('validdata_path', 'inputs/valid.pkl', 'total dataset includes valid set')
-tf.app.flags.DEFINE_string  ('checkpoint', './checkpoint/', 'the checkpoint dir')
+tf.app.flags.DEFINE_string  ('checkpoint', './checkpoint30/', 'the checkpoint dir')
 tf.app.flags.DEFINE_string  ('model_name', 'model4.ckpt', 'model name')
 
 FLAGS = tf.app.flags.FLAGS
@@ -132,7 +132,6 @@ def train():
                 print ('Best Valid Confusion Matrix:["ang","sad","hap","neu"]')
                 print (best_valid_conf)
                 print ("*****************************************************************" )
-                 
-                
+
 if __name__=='__main__':
     train()

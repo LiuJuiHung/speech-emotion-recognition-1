@@ -20,7 +20,7 @@ def read_data(dir):
     return best_valid_uw,best_valid_w,pred_test_w,test_acc_w,confusion_w,pred_test_uw,test_acc_uw,confusion_uw
 
 def load_data():
-    f = open('./IEMOCAP7.pkl','rb')
+    f = open('./IEMOCAP.pkl','rb')
     train_data,train_label,test_data,test_label,valid_data,valid_label,Valid_label,Test_label,pernums_test,pernums_valid = cPickle.load(f)
     return test_label
 

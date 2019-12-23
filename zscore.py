@@ -14,6 +14,16 @@ Created on Tue Jan  9 20:32:28 2018
 @author: hxj
 """
 
+"""
+@author: Liu
+@date: 20191211 23:45
+@main:
+    data has 2928 (train_num)
+    Read wav and translate to Mel_Spec(Logarithm of Energy Characteristics of Mel Filter, use logfbank)
+    and calculate delta
+    Calculate Mel_Spec, delta11, delta22 mean, sd(standard deviation)
+"""
+
 import wave
 import numpy as np
 import python_speech_features as ps
@@ -22,7 +32,7 @@ import glob
 import cPickle
 #import base
 #import sigproc
-eps = 1e-5
+eps = 1e-5  # 0.00001
 def wgn(x, snr):
     snr = 10**(snr/10.0)
     xpower = np.sum(x**2)/len(x)
@@ -99,13 +109,13 @@ def generate_label(emotion,classnum):
 def read_IEMOCAP():
     
     train_num = 2928
-    filter_num = 40
-    rootdir = '/home/jamhan/hxj/datasets/IEMOCAP_full_release'
+    filter_num = 40     # 梅爾濾波器數量
+    rootdir = '/home/mmnlab/Documents/IEMOCAP_full_release'
     traindata1 = np.empty((train_num*300,filter_num),dtype=np.float32)
     traindata2 = np.empty((train_num*300,filter_num),dtype=np.float32)
     traindata3 = np.empty((train_num*300,filter_num),dtype=np.float32)
     train_num = 0
-    
+
     
     for speaker in os.listdir(rootdir):
         if(speaker[0] == 'S'):
@@ -123,24 +133,25 @@ def read_IEMOCAP():
                                 break
                             if(line[0] == '['):
                                 t = line.split()
-                                emot_map[t[3]] = t[4]
+                                emot_map[t[3]] = t[4]       # wavname: emotion
                                 
         
                     file_dir = os.path.join(sub_dir, sess, '*.wav')
                     files = glob.glob(file_dir)
                     for filename in files:
                         #wavname = filename[-23:-4]
-                        wavname = filename.split("/")[-1][:-4]
+                        wavname = filename.split("/")[-1][:-4]  # find wav name
                         emotion = emot_map[wavname]
                         if(emotion in ['hap','ang','neu','sad']):
                              data, time, rate = read_file(filename)
-                             mel_spec = ps.logfbank(data,rate,nfilt = filter_num)
-                             delta1 = ps.delta(mel_spec, 2)
+                             mel_spec = ps.logfbank(data,rate,nfilt = filter_num)   # logfbank 對數濾波器能量， 計算音頻訊號中的梅爾濾波器能量特徵的對數
+                             delta1 = ps.delta(mel_spec, 2)                         # 從 mel_spec 特徵向量序列計算 delta 特徵
                              delta2 = ps.delta(delta1, 2)
                              
                              time = mel_spec.shape[0] 
                              if(speaker in ['Session1','Session2','Session3','Session4']):
                                  #training set
+
                                  if(time <= 300):
                                       part = mel_spec
                                       delta11 = delta1
@@ -195,7 +206,7 @@ def read_IEMOCAP():
     
     
         mean1 = np.mean(traindata1,axis=0)#axis=0纵轴方向求均值
-        std1 = np.std(traindata1,axis=0)
+        std1 = np.std(traindata1,axis=0)  #axis=0纵轴方向求標準差
         mean2 = np.mean(traindata2,axis=0)#axis=0纵轴方向求均值
         std2 = np.std(traindata2,axis=0)
         mean3 = np.mean(traindata3,axis=0)#axis=0纵轴方向求均值
