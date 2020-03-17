@@ -110,7 +110,7 @@ def read_IEMOCAP():
     
     train_num = 2928
     filter_num = 40     # 梅爾濾波器數量
-    rootdir = '/home/mmnlab/Documents/IEMOCAP_full_release'
+    rootdir = '/media/mmnlab/mmndata/IEMOCAP_full_release'
     traindata1 = np.empty((train_num*300,filter_num),dtype=np.float32)
     traindata2 = np.empty((train_num*300,filter_num),dtype=np.float32)
     traindata3 = np.empty((train_num*300,filter_num),dtype=np.float32)
@@ -215,7 +215,8 @@ def read_IEMOCAP():
         #output = './IEMOCAP'+str(m)+'_'+str(filter_num)+'.pkl'
         f=open(output,'wb') 
         cPickle.dump((mean1,std1,mean2,std2,mean3,std3),f)
-        f.close()           
+        f.close()
+    print(train_num)
     return
                 
         

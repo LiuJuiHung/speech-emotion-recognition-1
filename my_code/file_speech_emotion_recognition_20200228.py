@@ -8,9 +8,10 @@ Created on Mon Jan 15 16:23:45 2018
 Update on Fri Dec 13 22:19:23 2019
 @author: LiuJuiHung
 """
-
+# ===== Recognition Emotion =====
 from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
@@ -32,7 +33,17 @@ import pandas as pd
 # import sigproc
 
 # audio_file = sys.argv[1]
-all = np.array([], dtype=np.int)
+
+# ===== socket pi=====
+import socket
+import threading
+
+
+BASE_DIR = '/media/mmnlab/6cf5f717-b8af-4061-a005-df237cd25492/home/mmnlab/PycharmProjects/speech-emotion-recognition-RNN-2/speech-emotion-recognition-1/my_code/'
+list_conn = []
+web_ip = None
+
+
 eps = 1e-5
 
 def save_csv(name, data):
@@ -169,10 +180,6 @@ def audio_zscore(audio_file):
             traindata2[train_num * 300:(train_num + 1) * 300] = delta11
             traindata3[train_num * 300:(train_num + 1) * 300] = delta21
             train_num = train_num + 1
-
-
-
-
 
     mean1 = np.mean(traindata1, axis=0)  # axis=0纵轴方向求均值
     std1 = np.std(traindata1, axis=0)
@@ -336,12 +343,9 @@ def predict(test_data, pernums_test):
             index = index + pernums_test[s]
         # print (t_valid)
         # print (np.argmax(t_valid, 1))
-        a = np.argmax(t_valid, 1)
+        prediction_result = np.argmax(t_valid, 1)
         # print (type(a))
-        global all
-        all = np.append(all, a)
-        print (all)
-        return all
+        return prediction_result
 
 # test use
 def read_random_csv():
@@ -357,6 +361,7 @@ def save_csv(name, data):
         for rows in data:
             writer.writerow(rows)
 
+# 統計各情緒數量
 def all_np(arr):
     arr = np.array(arr)
     key = np.unique(arr)
@@ -368,65 +373,102 @@ def all_np(arr):
         result[k] = v
     return result
 
+# ===== start speech emotion recognition =====
+def start_rec_emotion(audio_path, conn):
+    # audio_path = "/media/mmnlab/mmndata/audio/wav_files/EMO_DB/" + sys.argv[1]  # audio file path
+    mean1, std1, mean2, std2, mean3, std3 = audio_zscore(audio_path)
+    test_data, pernums_test = read_audio(mean1, std1, mean2, std2, mean3, std3, audio_path)
+    p_result = predict(test_data, pernums_test)
+    print (p_result)  # 統計陣列裡最多的數值
+
+    if (p_result == 0):
+        emo_result = 'Angry'
+        print(emo_result)
+    elif (p_result == 1):
+        emo_result = 'Sad'
+        print(emo_result)
+    elif (p_result == 2):
+        emo_result = 'Happy'
+        print(emo_result)
+    elif (p_result == 3):
+        emo_result = 'Neutral'
+        print(emo_result)
+    elif (p_result == 4):
+        emo_result = 'Fear'
+        print(emo_result)
+    send_result = threading.Thread(target=send_rec_result, args=(emo_result, conn))
+    send_result.start()
+
+# ===== save audio file =====
+def new_connect(conn, addr):
+    global BASE_DIR, list_conn
+    while True:
+        data = conn.recv(1024)
+
+        if (str(data).encode('utf-8') == "done" or str(data).encode('utf-8') == ''):
+            return
+
+        # ===== receive web signal =====
+        elif (str(data).encode('utf-8') == "Task1"):
+            print (str(data).encode('utf-8'))
+            send_result = threading.Thread(target=rs_web_cmd, args=("Task1", ))
+            send_result.start()
+
+        else:
+            print(str(data).encode('utf-8'))
+            cmd, filename, file_size = str(data).encode('utf-8').split('|')
+            path = os.path.join(BASE_DIR, 'data', filename)
+            file_size = int(file_size)
+            has_sent = 0
+
+            with open(path, 'wb') as fp:
+                while has_sent != file_size:
+                    data = conn.recv(1024)
+                    fp.write(data)
+                    has_sent += len(data)
+                    print('\r' + '[保存進度]:%s%.02f%%' % ('>' * int((has_sent / file_size) * 50), float(has_sent / file_size) * 100), end='')
+            print()
+            print(' %s 保存成功！' % filename)
+            print(path)
+            start_rec = threading.Thread(target=start_rec_emotion, args=(path, conn))
+            start_rec.start()
+
+# ===== send recognition result to client(pi) =====
+def send_rec_result(rec_result, conn):
+    global web_ip
+    conn.sendall(bytes(rec_result).decode('utf-8'))
+    web_ip.sendall(bytes(rec_result).decode('utf-8'))
+
+# ===== receive web signal and send to client(pi) =====
+def rs_web_cmd(task_cmd):
+    global list_conn
+    print(list_conn)
+    for ip_index in range(len(list_conn)):
+        list_conn[ip_index].sendall(bytes(task_cmd).decode('utf-8'))
 
 if __name__ == '__main__':
-    result = np.array([[]])
-    index = np.array([])
-    most_result = []
-    # p_result = np.array([], dtype=np.int)
-    # time start
-    time_start = time.time()
-    # mypath = "/home/mmnlab/Documents/audio/wav_files/AI_research/" + sys.argv[1]  # original
-    # mypath = "/home/mmnlab/Documents/audio/cutting_sec/AI_research/" + sys.argv[1]  # cutting in sec
-    # mypath = "/home/mmnlab/Documents/audio/Cutting_seg/" + sys.argv[1]  # cutting in segment
-    mypath = "/media/mmnlab/mmndata/data/test-custom/" + sys.argv[1]  # original
-    files = listdir(mypath)  # 取得所有檔案與子目錄名稱
-    files.sort()
-    print(len(files))
-
-    for i in range(1):
-        for ff in files:
-            if ff.endswith(".wav"):  # 只能讀取".wav"
-                fullpath = join(mypath, ff)  # 產生檔案的絕對路徑
-                print(fullpath)
-                audio_file = fullpath
-                mean1, std1, mean2, std2, mean3, std3 = audio_zscore(audio_file)
-                test_data, pernums_test = read_audio(mean1, std1, mean2, std2, mean3, std3, audio_file)
-                p_result = predict(test_data, pernums_test)
-
-        most_result.append(np.argmax(np.bincount(p_result)))    # 統計陣列裡最多的數值，存入陣列
-        print (most_result)
-        for ff_count in range(len(files)):
-            index = np.append(index, ff_count)
-        global all
-        all = np.delete(all, index)     # delete array 裡的組數
-        if i == 0:
-            result = p_result
+    IP_PORT = ('0.0.0.0', 12345)
+    sk = socket.socket()
+    sk.bind(IP_PORT)
+    sk.listen(1)
+    print('服務開啟成功!\n等待連線...')
+    while True:
+        conn, addr = sk.accept()
+        print("{0}, {1} 已連接！".format(addr[0], addr[1]))
+        # only append pi connect
+        if (addr[0] != '127.0.0.1'):
+            list_conn.append(conn)
         else:
-            result = np.append([result], [p_result])
-        print (result)
-    save_csv("other_result", [most_result])
-    result_emotion = np.argmax(np.bincount(most_result))
-    print (result_emotion)          # 統計陣列裡最多的數值
-    print (all_np(most_result))     # 統計各情緒數量
-    if (result_emotion == 0):
-        print('Angry')
-    elif(result_emotion == 1):
-        print('Sad')
-    elif(result_emotion == 2):
-        print('Happy')
-    elif(result_emotion == 3):
-        print('Neutral')
-    elif(result_emotion == 4):
-        print('Fear')
-    # save_csv("Sad_2_2s_result", [result])
+            web_ip = conn
 
-    # read_random_csv()
+        t = threading.Thread(target=new_connect, args=(conn, addr))
+        t.start()
 
-    # time end
-    time_end = time.time()
-    print "cost time :", (time_end - time_start)
-    # print "test_num:", test_num
-    # print "train_num:", train_num
-#    n = wgn(x, 6)
-#    xn = x+n # 增加了6dBz信噪比噪声的信号
+
+    # # time start
+    # time_start = time.time()
+    #
+    # # time end
+    # time_end = time.time()
+    # print "cost time :", (time_end - time_start)
+
