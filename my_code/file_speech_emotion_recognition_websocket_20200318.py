@@ -29,19 +29,23 @@ from os import listdir
 from os.path import join
 import csv
 import pandas as pd
+import threading
+import json
 # import base
 # import sigproc
 
 # audio_file = sys.argv[1]
 
-# ===== socket pi=====
+# ===== socket to pi=====
 import socket
-import threading
 
+# ===== websocket =====
+import websocket
+uri = "ws://localhost:8000/ws/polls/liujuihung/"
+ws = None
 
 BASE_DIR = '/media/mmnlab/6cf5f717-b8af-4061-a005-df237cd25492/home/mmnlab/PycharmProjects/speech-emotion-recognition-RNN-2/speech-emotion-recognition-1/my_code/'
 list_conn = []
-web_ip = None
 
 
 eps = 1e-5
@@ -398,6 +402,8 @@ def start_rec_emotion(audio_path, conn):
         print(emo_result)
     send_result_pi = threading.Thread(target=send_rec_result, args=(emo_result, conn))
     send_result_pi.start()
+    send_result_web = threading.Thread(target=ws_send, args=(emo_result, ))
+    send_result_web.start()
 
 # ===== save audio file =====
 def new_connect(conn, addr):
@@ -407,12 +413,6 @@ def new_connect(conn, addr):
 
         if (str(data).encode('utf-8') == "done" or str(data).encode('utf-8') == ''):
             return
-
-        # ===== receive web signal =====
-        elif (str(data).encode('utf-8') == "Task1"):
-            print (str(data).encode('utf-8'))
-            send_task_cmd = threading.Thread(target=rs_web_cmd, args=("Task1", ))
-            send_task_cmd.start()
 
         else:
             print(str(data).encode('utf-8'))
@@ -435,18 +435,46 @@ def new_connect(conn, addr):
 
 # ===== send recognition result to client(pi) =====
 def send_rec_result(rec_result, conn):
-    global web_ip
     conn.sendall(bytes(rec_result).decode('utf-8'))
-    web_ip.sendall(bytes(rec_result).decode('utf-8'))
 
-# ===== receive web signal and send to client(pi) =====
+# ===== send web signal to client(pi) =====
 def rs_web_cmd(task_cmd):
     global list_conn
     print(list_conn)
     for ip_index in range(len(list_conn)):
         list_conn[ip_index].sendall(bytes(task_cmd).decode('utf-8'))
 
+# ===== websocket connect =====
+def ws_connect():
+    global ws, uri
+    ws = websocket.WebSocket()
+    ws.connect(uri)
+
+# ===== websocket receive (receive web signal) =====
+def ws_recv():
+    global ws
+    try:
+        while True:
+            print("**************************")
+            message = ws.recv()
+            text_json = json.loads(message)['message']
+            print(text_json + "\n")
+            if text_json == "Task1":
+                send_task_cmd = threading.Thread(target=rs_web_cmd, args=("Task1",))
+                send_task_cmd.start()
+    except:
+        ws.close()
+
+# ===== websocket send (send emotion result to web) =====
+def ws_send(em_result):
+    global ws
+    ws.send(json.dumps({'message': em_result}))
+
+# ===== MAIN =====
 if __name__ == '__main__':
+    ws_connect()
+    ws_recv_thread = threading.Thread(target=ws_recv)
+    ws_recv_thread.start()
     IP_PORT = ('0.0.0.0', 12345)
     sk = socket.socket()
     sk.bind(IP_PORT)
@@ -458,8 +486,6 @@ if __name__ == '__main__':
         # only append pi connect
         if (addr[0] != '127.0.0.1'):
             list_conn.append(conn)
-        else:
-            web_ip = conn
 
         t = threading.Thread(target=new_connect, args=(conn, addr))
         t.start()
